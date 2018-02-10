@@ -153,11 +153,24 @@ def _channels():
     )
 
 
+def get_dsn(db_name):
+
+    config = openerp.tools.config
+    _dsn = []
+
+    for p in ('host', 'port', 'user', 'password'):
+        cfg = config.get('connector_db_' + p) or config.get('db_' + p)
+        if cfg:
+            _dsn.append(u'{}={}'.format(p, cfg))
+
+    return u'{} dbname={}'.format(' '.join(_dsn), db_name)
+
+
 def _async_http_get(port, db_name, job_uuid):
     # Method to set failed job (due to timeout, etc) as pending,
     # to avoid keeping it as enqueued.
     def set_job_pending():
-        conn = psycopg2.connect(openerp.sql_db.dsn(db_name)[1])
+        conn = psycopg2.connect(get_dsn(db_name))
         conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         with closing(conn.cursor()) as cr:
             cr.execute(
@@ -195,7 +208,7 @@ class Database(object):
 
     def __init__(self, db_name):
         self.db_name = db_name
-        self.conn = psycopg2.connect(openerp.sql_db.dsn(db_name)[1])
+        self.conn = psycopg2.connect(get_dsn(db_name))
         self.conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         self.has_connector = self._has_connector()
         if self.has_connector:
